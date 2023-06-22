@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+<head><title>Al CNN test</title>
 <head>
     <title>Study Alarm</title>
     <style>
@@ -11,18 +12,22 @@
             background-image: url("background_image.jpg"); /* Replace "background_image.jpg" with the path to your background image */
             background-size: cover;
         }
-        
+
         .container {
             text-align: center;
             background-color: rgba(255, 255, 255, 0.8); /* Set the desired background color and opacity */
             padding: 20px;
         }
-        
+
         #webcam-container {
             margin-bottom: 20px;
         }
     </style>
 </head>
+<body><div>Teachable Machine Pose Model</div>
+    <button type="button" onclick="init()">Start</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
 <body>
     <div class="container">
         <h1>Study Alarm</h1>
@@ -33,48 +38,50 @@
         <div id="timer">00:00:00</div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
-        // Load the image model and setup the webcam
-        async function init() {
-            const URL = "./my_model/";
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
+@@ -13,8 +41,18 @@
 
-            // Load the model and metadata
-            const model = await tmImage.load(modelURL, metadataURL);
-            const maxPredictions = model.getTotalClasses();
+    // the link to your model provided by Teachable Machine export panel
+    const URL = "./my_model/";
+    const studySound = new Audio("study_sound.mp3"); // Replace "study_sound.mp3" with the path to your study sound file
+    const breakSound = new Audio("break_sound.mp3");
+    let alarmSound = new Audio("alarm_sound.mp3"); // Replace "alarm_sound.mp3" with the path to your alarm sound file
+    let alarmTimer;
+    let model, webcam, labelContainer, maxPredictions;
 
-            // Convenience function to setup a webcam
-            const flip = true; // whether to flip the webcam
-            const webcam = new tmImage.Webcam(400, 400, flip); // width, height, flip
-            await webcam.setup(); // request access to the webcam
-            await webcam.play();
+    let timer;
+    let studyInterval;
+    let breakInterval;
+    let studyCount = 0;
+    let isStudyTime = false;
+    let isBreakTime = false;
 
-            // Append the webcam canvas to the DOM
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            const labelContainer = document.getElementById("label-container");
-            for (let i = 0; i < maxPredictions; i++) { // Add class labels
-                labelContainer.appendChild(document.createElement("div"));
-            }
+    // Load the image model and setup the webcam
+    async function init() {
+        const modelURL = URL + "model.json";
+@@ -29,7 +67,7 @@
 
-            // Main loop for detecting poses
-            setInterval(async () => {
-                webcam.update(); // Update the webcam frame
-                await predict(model, webcam); // Predict using
-
+        // Convenience function to setup a webcam
+        const flip = true; // whether to flip the webcam
+        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+        webcam = new tmImage.Webcam(400, 400, flip); // width, height, flip
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+@@ -48,23 +86,100 @@
         window.requestAnimationFrame(loop);
     }
 
+    // run the webcam image through the image model
+    async function predict() {
+        // predict can take in an image, video or canvas html element
+        const prediction = await model.predict(webcam.canvas);
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPrediction =
+                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            labelContainer.childNodes[i].innerHTML = classPrediction;
     function startProgram() {
         clearInterval(studyInterval);
         clearInterval(breakInterval);
@@ -157,10 +164,12 @@ function takeBreak() {
     isStudyTime = false;
     isBreakTime = true;
 
+// run the webcam image through the image model
     startBreak();
 }
     // run the webcam image through the image model
 async function predict() {
+    // predict can take in an image, video or canvas html element
         // predict can take in an image, video or canvas html element
     const prediction = await model.predict(webcam.canvas);
         for (let i = 0; i < maxPredictions; i++) {
@@ -168,22 +177,20 @@ async function predict() {
                 prediction[i].className + ": " + prediction[i].probability.toFixed(2);
             labelContainer.childNodes[i].innerHTML = classPrediction;
         }
-    
+
     if(prediction[0].className=="뜬눈"&&prediction[0].probability.toFixed(2)==1.00)
     {
         labelContainer.childNodes[0].innerHTML="뜬눈"
-    }
-    else if(prediction[1].className=="감은눈"&&prediction[1].probability.toFixed(2)==1.00)
-    {
+@@ -74,12 +189,7 @@
         labelContainer.childNodes[1].innerHTML="감은눈"
     }
-    
-    
+
+    else{ labelContainer.childNodes[0].innerHTML="알수없음" }
+    //for (let i = 0; i < maxPredictions; i++) {
+   //     const classPrediction =
+  //          prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+   //     labelContainer.childNodes[i].innerHTML = classPrediction;
+    //}
+
 }
 </script>
-
-
-
-
-</body>
-</html>
