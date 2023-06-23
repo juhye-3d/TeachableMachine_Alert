@@ -3,7 +3,7 @@
 <head>
     <title>Study Alarm</title>
     <style>
-        .body {
+        body {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -21,7 +21,6 @@
         #webcam-container {
             margin-bottom: 20px;
         }
-       
     </style>
 </head>
 <body>
@@ -30,10 +29,76 @@
         <button type="button" onclick="startProgram()">Start</button>
         <div id="webcam-container"></div>
         <div id="label-container"></div>
+        <button type="button" onclick="stopProgram()">Stop</button>
         <div id="timer">00:00:00</div>
     </div>
 
-    <audio id="studySound" src="study_sound.mp3"></audio> <!-- Replace with the path to your study sound file -->
-    <script src="script.js"></script> <!-- Add your JavaScript code in an external file named "script.js" -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+    <script type="text/javascript">
+        const URL = "./my_model/";
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        // Load the image model and setup the webcam
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true;
+            webcam = new tmImage.Webcam(200, 200, flip);
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            if (prediction[0].className === "뜬눈" && prediction[0].probability.toFixed(2) === "1.00") {
+                labelContainer.childNodes[0].innerHTML = "뜬눈";
+            } else if (prediction[0].className === "감은눈" && prediction[1].probability.toFixed(2) === "1.00") {
+                labelContainer.childNodes[1].innerHTML = "감은눈";
+            }
+        }
+
+        function startProgram() {
+            init();
+            playSoundAndStart();
+        }
+
+        function playSoundAndStart() {
+           const studySound = new Audio("study_sound.mp3"); // Replace with the path to your study sound file
+    studySound.play();
+
+    setTimeout(() => {
+        webcam.start();
+        startStudy(); // Start your program logic here
+    }, 500); // Adjust the delay (in milliseconds) if needed
+        }
+
+        function stopProgram() {
+            webcam.stop();
+            const studySound = new Audio("study_sound.mp3"); // Replace with the path to your study sound file
+            studySound.pause();
+        }
+
+
+</script>
 </body>
 </html>
