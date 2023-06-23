@@ -48,17 +48,17 @@
             maxPredictions = model.getTotalClasses();
 
             const flip = true;
-            webcam = new tmImage.Webcam(400, 400, flip);
+            webcam = new tmImage.Webcam(200, 200, flip);
             await webcam.setup();
             await webcam.play();
-
+            window.requestAnimationFrame(loop);
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             labelContainer = document.getElementById("label-container");
             for (let i = 0; i < maxPredictions; i++) {
                 labelContainer.appendChild(document.createElement("div"));
             }
 
-            window.requestAnimationFrame(loop);
+            
         }
 
         async function loop() {
@@ -156,11 +156,11 @@ function takeBreak() {
     // run the webcam image through the image model
 async function predict() {
     const prediction = await model.predict(webcam.canvas);
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
-        }
+       // for (let i = 0; i < maxPredictions; i++) {
+       //     const classPrediction =
+        //        prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+        //    labelContainer.childNodes[i].innerHTML = classPrediction;
+       // }
 
     if(prediction[0].className=="뜬눈"&&prediction[0].probability.toFixed(2)==1.00)
     {
