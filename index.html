@@ -78,15 +78,15 @@
 
         async function predict() {
              const prediction = await model.predict(webcam.canvas);
-             
-  
+              
             if (prediction[0].className === "뜬눈" && prediction[0].probability.toFixed(2) === "1.00") {
                 labelContainer.childNodes[0].innerHTML = "뜬눈";
-                  labelDiv.innerHTML = `${className}: ${probability}`
+                
             } else if (prediction[0].className === "감은눈" && prediction[1].probability.toFixed(2) === "1.00") {
                 labelContainer.childNodes[1].innerHTML = "감은눈";
-                  labelDiv.innerHTML = `${className}: ${probability}`
+                  
             }
+                   labelDiv.innerHTML = `${className}: ${probability}`
         }
 
    function startProgram() {
