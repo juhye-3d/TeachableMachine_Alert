@@ -47,8 +47,8 @@
             const flip = true;
             webcam = new tmImage.Webcam(200, 200, flip);
             await webcam.setup();
-            await webcam.play();
-            window.requestAnimationFrame(loop);
+            webcam.play();
+            requestAnimationFrame(loop);
 
             document.getElementById("webcam-container").appendChild(webcam.canvas);
         }
@@ -71,23 +71,16 @@
         // Start the prediction loop
         async function startPrediction() {
             await predict();
-            window.requestAnimationFrame(startPrediction);
-        }
-        
-        async function predict() {
-             const prediction = await model.predict(webcam.canvas);
-             labelDiv.innerHTML = `${className}: ${probability}`;
-            if (prediction[0].className === "뜬눈" && prediction[0].probability.toFixed(2) === "1.00") {
-                labelContainer.childNodes[0].innerHTML = "뜬눈";
-                
-            } else if (prediction[0].className === "감은눈" && prediction[1].probability.toFixed(2) === "1.00") {
-                labelContainer.childNodes[1].innerHTML = "감은눈";
-                  
-            }
-                  
+            requestAnimationFrame(startPrediction);
         }
 
-    function startProgram() {
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            labelContainer.childNodes[0].innerHTML = `뜬눈: ${prediction[0].probability.toFixed(2)}`;
+            labelContainer.childNodes[1].innerHTML = `감은눈: ${prediction[1].probability.toFixed(2)}`;
+        }
+
+        function startProgram() {
             loadModel();
             playSoundAndStart();
         }
