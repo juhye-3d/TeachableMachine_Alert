@@ -43,7 +43,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
     <script type="text/javascript">
-        let model, webcam, labelContainer, maxPredictions;
+     let model, webcam, labelContainer, maxPredictions, historyContainer;
 
         async function init() {
             const URL = "./my_model/";
@@ -89,7 +89,7 @@
     function startBreak() {
          clearInterval(studyInterval);
         clearInterval(breakInterval);
-       sStudyTime = false;
+       isStudyTime = false;
             isBreakTime = true;
             startTimer(1200000); // 20 minutes break time
             breakInterval = setInterval(displayBreakMessage, 1000);
@@ -212,14 +212,7 @@ async function predict() {
    const labelDiv = document.createElement("div");
    labelDiv.innerHTML = classPrediction;
   labelContainer.appendChild(labelDiv);}
-    if(prediction[0].className=="뜬눈"&&prediction[0].probability.toFixed(2)==1.00)
-    {
-        labelContainer.childNodes[0].innerHTML="뜬눈"
-    }
-     else if(prediction[0].className=="감은눈"&&prediction[1].probability.toFixed(2)==1.00)
-    {
-        labelContainer.childNodes[1].innerHTML="감은눈"
-    }
+   
   function playSound(soundFile) {
             const audio = new Audio(soundFile);
             audio.play();
