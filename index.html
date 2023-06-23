@@ -70,12 +70,11 @@
         }
 
         async function predict() {
-            const prediction = await model.predict(webcam.canvas);
-            for (let i = 0; i < maxPredictions; i++) {
-                const className = prediction[i].className;
-                const probability = prediction[i].probability.toFixed(2);
-                const labelDiv = labelContainer.childNodes[i];
-                labelDiv.innerHTML = `${className}: ${probability}`;
+             const prediction = await model.predict(webcam.canvas);
+            if (prediction[0].className === "뜬눈" && prediction[0].probability.toFixed(2) === "1.00") {
+                labelContainer.childNodes[0].innerHTML = "뜬눈";
+            } else if (prediction[0].className === "감은눈" && prediction[1].probability.toFixed(2) === "1.00") {
+                labelContainer.childNodes[1].innerHTML = "감은눈";
             }
         }
 
