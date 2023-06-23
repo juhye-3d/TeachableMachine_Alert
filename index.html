@@ -83,8 +83,13 @@
         }
 
         function playSoundAndStart() {
-            const studySound = new Audio("study_sound.mp3"); // Replace with the path to your study sound file
-            studySound.play();
+           const studySound = new Audio("study_sound.mp3"); // Replace with the path to your study sound file
+    studySound.play();
+
+    setTimeout(() => {
+        webcam.start();
+        startStudy(); // Start your program logic here
+    }, 500); // Adjust the delay (in milliseconds) if needed
         }
 
         function stopProgram() {
