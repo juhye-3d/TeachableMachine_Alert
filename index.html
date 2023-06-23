@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-<head><title>Al CNN test</title>
 <head>
     <title>Study Alarm</title>
     <style>
@@ -27,170 +26,103 @@
 <body>
     <div class="container">
         <h1>Study Alarm</h1>
+        <button type="button" onclick="startCamera()">CAM</button>
+        <button type="button" onclick="startProgram()">Start</button>
         <div id="webcam-container"></div>
         <div id="label-container"></div>
-        <button type="button" onclick="startProgram()">Start</button>
         <button type="button" onclick="stopProgram()">Stop</button>
         <div id="timer">00:00:00</div>
     </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<script type="text/javascript">
-    // the link to your model provided by Teachable Machine export panel
-    const URL = "./my_model/";
-    const studySound = new Audio("study_sound.mp3"); // Replace "study_sound.mp3" with the path to your study sound file
-    const breakSound = new Audio("break_sound.mp3");
-    let alarmSound = new Audio("alarm_sound.mp3"); // Replace "alarm_sound.mp3" with the path to your alarm sound file
-    let alarmTimer;
-    let model, webcam, labelContainer, maxPredictions;
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+    <script type="text/javascript">
+        const URL = "./my_model/";
 
-    let timer;
-    let studyInterval;
-    let breakInterval;
-    let studyCount = 0;
-    let isStudyTime = false;
-    let isBreakTime = false;
+        let model, webcam, labelContainer, maxPredictions;
+        let startTime, timerInterval;
 
-    // Load the image model and setup the webcam
-    async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-        // load the model and metadata
-        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-        // or files from your local hard drive
-        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+        // Start the webcam
+        async function startCamera() {
+            const flip = true;
+            webcam = new tmImage.Webcam(200, 200, flip);
+            await webcam.setup();
+            webcam.play();
+            requestAnimationFrame(loop);
 
-        // Convenience function to setup a webcam
-        const flip = true; // whether to flip the webcam
-        webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
-        webcam = new tmImage.Webcam(400, 400, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
-        await webcam.play();
-        window.requestAnimationFrame(loop);
-        // append elements to the DOM
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) { // and class labels
-            labelContainer.appendChild(document.createElement("div"));
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
         }
-    }
-    async function loop() {
-        webcam.update(); // update the webcam frame
-        await predict();
-        window.requestAnimationFrame(loop);
-    }
 
-    // run the webcam image through the image model
-    async function predict() {
-        // predict can take in an image, video or canvas html element
-        const prediction = await model.predict(webcam.canvas);
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
+        // Load the image model
+        async function loadModel() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) {
+                const labelDiv = document.createElement("div");
+                labelContainer.appendChild(labelDiv);
+            }
         }
-            function startProgram() {
-        clearInterval(studyInterval);
-        clearInterval(breakInterval);
-        studySound.play(); // Play the study sound
-        studyCount = 0;
-        isStudyTime = true;
-        timer = setTimeout(startBreak, 2400000); // 40 minutes study time
-        timer = setTimeout(startStudy, 600000); // 10 minutes break time
-        studyInterval = setInterval(checkEyes, 1000);
-    }
 
-    function startBreak() {
-        clearTimeout(timer);
-        isStudyTime = false;
-        isBreakTime = true;
-        timer = setTimeout(startBreak, 2400000); // 40 minutes study time
-        timer = setTimeout(startStudy, 600000); // 10 minutes break time
-        breakInterval = setInterval(displayBreakMessage, 1000);
-        breakSound.play(); // Play the break sound
-    }
-
-    function startStudy() {
-        clearTimeout(timer);
-        isStudyTime = true;
-        isBreakTime = false;
-        studyCount++;
-        if (studyCount >= 5) {
-            clearInterval(studyInterval);
-            clearInterval(breakInterval);
-            displayEndMessage();
-            return;
+        // Start the prediction loop
+        async function startPrediction() {
+            await predict();
+            requestAnimationFrame(startPrediction);
         }
-        studySound.play();
-        timer = setTimeout(startBreak, 2400000); // 40 minutes study time
-        timer = setTimeout(startStudy, 600000); // 10 minutes break time
-        studyInterval = setInterval(checkEyes, 1000);
-    }
 
-    function displayBreakMessage() {
-    const minutes = Math.floor(timer / 60000);
-    const seconds = Math.floor((timer % 60000) / 1000);
-    console.log(`Break Time: ${minutes} minutes ${seconds} seconds remaining`);
-}
-    function checkEyes() {
-    if (!isStudyTime) return;
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            labelContainer.childNodes[0].innerHTML = `뜬눈: ${prediction[0].probability.toFixed(2)}`;
+            labelContainer.childNodes[1].innerHTML = `감은눈: ${prediction[1].probability.toFixed(2)}`;
+        }
 
-    const prediction = model.predict(webcam.canvas);
-    const closedEyesProbability = prediction[1].probability.toFixed(2);
+        function startProgram() {
+            loadModel();
+            playSoundAndStart();
+            startTimer();
+        }
 
-    if (closedEyesProbability === "1.00") {
-        if (timer) clearTimeout(timer); // Clear the previous timer if it exists
-        timer = setTimeout(alertUser, 20000); // Alert after 20 seconds of closed eyes
-    } else {
-        clearTimeout(timer);
-        timer = null;
-    }
-}
+        function playSoundAndStart() {
+            const studySound = new Audio("study_sound.mp3"); // Replace with the path to your study sound file
+            studySound.play();
+        }
 
-function alertUser() {
-    if (isBreakTime) {
-        console.log("Alert: 일어나세요~");
-        return;
-    }
-    alarmSound.play();
-    alarmTimer = setTimeout(stopAlarm, 30000);
-    console.log("Alert: 일어나세요~");
-}
-function stopAlarm() {
-    alarmSound.pause();
-    alarmSound.currentTime = 0;
-}
+        function stopProgram() {
+            webcam.stop();
+            const studySound = new Audio("study_sound.mp3"); // Replace with the path to your study sound file
+            studySound.pause();
+            clearInterval(timerInterval);
+        }
 
-const breakButton = document.getElementById("break-button");
-breakButton.addEventListener("click", takeBreak);
-function takeBreak() {
-    clearTimeout(timer);
-    clearInterval(studyInterval);
-    clearInterval(breakInterval);
-    isStudyTime = false;
-    isBreakTime = true;
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
 
-// run the webcam image through the image model
-    startBreak();
-}
-    // run the webcam image through the image model
-async function predict() {
+        function updateTimer() {
+            const timerElement = document.getElementById("timer");
+            const currentTime = Date.now();
+            const elapsedTime = currentTime - startTime;
+            const formattedTime = formatTime(elapsedTime);
+            timerElement.textContent = formattedTime;
+        }
 
-    const prediction = await model.predict(webcam.canvas);
-       
-    if(prediction[0].className=="뜬눈"&&prediction[0].probability.toFixed(2)==1.00)
-    {
-        labelContainer.childNodes[0].innerHTML="뜬눈"}
-else if(prediction[1].className=="감은눈"&&prediction[1].probability.toFixed(2)==1.00)
-{    labelContainer.childNodes[1].innerHTML="감은눈"
-    }
+        function formatTime(time) {
+            const seconds = Math.floor(time / 1000) % 60;
+            const minutes = Math.floor(time / (1000 * 60)) % 60;
+            const hours = Math.floor(time / (1000 * 60 * 60));
 
-  
+            const formattedSeconds = seconds.toString().padStart(2, "0");
+            const formattedMinutes = minutes.toString().padStart(2, "0");
+            const formattedHours = hours.toString().padStart(2, "0");
 
-}
-</script>
+            return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+        }
+    </script>
 </body>
 </html>
