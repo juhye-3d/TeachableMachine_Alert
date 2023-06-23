@@ -18,21 +18,27 @@
             padding: 20px;
         }
 
-        #webcam-container {
-            margin-bottom: 20px;
+          #webcam-container {
+            margin-bottom: 50px;
+        }
+
+        #history-container {
+            text-align: left;
+            margin-top: 50px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Study Alarm</h1>
-        <button type="button" onclick="init()">Start</button>
-        <div id="webcam-container"></div>
-        <div id="label-container"></div>
         <button type="button" onclick="startProgram()">Start</button>
         <button type="button" onclick="stopProgram()">Stop</button>
+        <div id="webcam-container"></div>
+        <div id="label-container"></div>
+
         <div id="timer">00:00:00</div>
     </div>
+     <div id="history-container"></div>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
@@ -59,7 +65,7 @@
                 labelContainer.appendChild(document.createElement("div"));
             }
 
-            
+             historyContainer = document.getElementById("history-container");
         }
 
         async function loop() {
@@ -71,23 +77,24 @@
 
     function startProgram() {
         clearInterval(studyInterval);
-        clearInterval(breakInterval);
-        studySound.play(); // Play the study sound
-        studyCount = 0;
-        isStudyTime = true;
-        timer = setTimeout(startBreak, 2400000); // 40 minutes study time
-        timer = setTimeout(startStudy, 600000); // 10 minutes break time
+            clearInterval(breakInterval);
+            studyCount = 0;
+            isStudyTime = true;
+            startTimer(2400000); 
+     playSound("study_sound.mp3");
+            displayHistory("Program started.");
         studyInterval = setInterval(checkEyes, 1000);
     }
 
     function startBreak() {
-        clearTimeout(timer);
-        isStudyTime = false;
-        isBreakTime = true;
-        timer = setTimeout(startBreak, 2400000); // 40 minutes study time
-        timer = setTimeout(startStudy, 600000); // 10 minutes break time
-        breakInterval = setInterval(displayBreakMessage, 1000);
-        breakSound.play(); // Play the break sound
+         clearInterval(studyInterval);
+        clearInterval(breakInterval);
+       sStudyTime = false;
+            isBreakTime = true;
+            startTimer(1200000); // 20 minutes break time
+            breakInterval = setInterval(displayBreakMessage, 1000);
+            playSound("break_sound.mp3");
+            displayHistory("Break started.");
     }
 
     function startStudy() {
@@ -106,6 +113,30 @@
         timer = setTimeout(startStudy, 600000); // 10 minutes break time
         studyInterval = setInterval(checkEyes, 1000);
     }
+         function startTimer(duration) {
+            let timer = duration;
+            let minutes, seconds;
+
+            timerInterval = setInterval(function () {
+                minutes = Math.floor((timer / 60000) % 60);
+                seconds = Math.floor((timer / 1000) % 60);
+
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                document.getElementById("timer").textContent = minutes + ":" + seconds;
+
+                if (--timer < 0) {
+                    clearInterval(timerInterval);
+                    if (isStudyTime) {
+                        startBreak();
+                    } else if (isBreakTime) {
+                        startStudy();
+                    }
+                }
+            }, 1000);
+        }
+
 
     function displayBreakMessage() {
     const minutes = Math.floor(timer / 60000);
@@ -113,14 +144,15 @@
     console.log(`Break Time: ${minutes} minutes ${seconds} seconds remaining`);
 }
     function checkEyes() {
-    if (!isStudyTime) return;
+        if (!isStudyTime) return;
 
-    const prediction = model.predict(webcam.canvas);
-    const closedEyesProbability = prediction[1].probability.toFixed(2);
-
-    if (closedEyesProbability === "1.00") {
-        if (timer) clearTimeout(timer); // Clear the previous timer if it exists
-        timer = setTimeout(alertUser, 20000); // Alert after 20 seconds of closed eyes
+        const prediction = model.predict(webcam.canvas);
+        const closedEyesProbability = prediction[1].probability.toFixed(2);
+    
+        if (closedEyesProbability === "1.00") {
+        clearInterval(studyInterval);
+                playSound("alarm_sound.mp3");
+                displayHistory("Eyes closed for 20 seconds. Alert triggered.");
     } else {
         clearTimeout(timer);
         timer = null;
@@ -156,20 +188,30 @@ function takeBreak() {
 }
     // run the webcam image through the image model
 async function predict() {
-    const prediction = await model.predict(webcam.canvas);
-       // for (let i = 0; i < maxPredictions; i++) {
-       //     const classPrediction =
-        //        prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-        //    labelContainer.childNodes[i].innerHTML = classPrediction;
-       // }
-  labelContainer.innerHTML = ""; // Clear previous labels
-     
+     return new Promise((resolve, reject) => {
+                model.predict(webcam.canvas).then((predictions) => {
+                    labelContainer.innerHTML = ""; // Clear previous labels
+
+                    for (let i = 0; i < maxPredictions; i++) {
+                        const classPrediction =
+                            predictions[i].className + ": " + predictions[i].probability.toFixed(2);
+                        const labelDiv = document.createElement("div");
+                        labelDiv.innerHTML = classPrediction;
+                        labelContainer.appendChild(labelDiv);
+                    }
+
+                    resolve();
+                }).catch((error) => {
+                    reject(error);
+                });
+            });
+        }
   for (let i = 0; i < maxPredictions; i++) {
-                const classPrediction =
-                prediction[i].className + ": " + prediction[i].toFixed(2);
-                const labelDiv = document.createElement("div");
-                labelDiv.innerHTML = classPrediction;
-                labelContainer.appendChild(labelDiv);}
+    const classPrediction =
+    prediction[i].className + ": " + prediction[i].toFixed(2);
+   const labelDiv = document.createElement("div");
+   labelDiv.innerHTML = classPrediction;
+  labelContainer.appendChild(labelDiv);}
     if(prediction[0].className=="뜬눈"&&prediction[0].probability.toFixed(2)==1.00)
     {
         labelContainer.childNodes[0].innerHTML="뜬눈"
@@ -178,7 +220,19 @@ async function predict() {
     {
         labelContainer.childNodes[1].innerHTML="감은눈"
     }
+  function playSound(soundFile) {
+            const audio = new Audio(soundFile);
+            audio.play();
+        }
 
+        function displayHistory(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const historyItem = document.createElement("div");
+            historyItem.textContent = timestamp + " - " + message;
+            historyContainer.appendChild(historyItem);
+        }
+
+        window.addEventListener("load", init);
  
 }
 </script>
