@@ -27,9 +27,9 @@
     <div class="container">
         <h1>Study Alarm</h1>
         <button type="button" onclick="startCamera()">CAM</button>
+        <button type="button" onclick="startProgram()">Start</button>
         <div id="webcam-container"></div>
         <div id="label-container"></div>
-        <button type="button" onclick="startProgram()">Start</button>
         <button type="button" onclick="stopProgram()">Stop</button>
         <div id="timer">00:00:00</div>
     </div>
@@ -42,19 +42,8 @@
 
         let model, webcam, labelContainer, maxPredictions;
 
-        // Load the image model
-        async function loadModel() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
-        }
-
-        // Setup and start the camera
+        // Start the webcam
         async function startCamera() {
-            await loadModel();
-
             const flip = true;
             webcam = new tmImage.Webcam(200, 200, flip);
             await webcam.setup();
@@ -62,6 +51,16 @@
             window.requestAnimationFrame(loop);
 
             document.getElementById("webcam-container").appendChild(webcam.canvas);
+        }
+
+        // Load the image model
+        async function loadModel() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
             labelContainer = document.getElementById("label-container");
             for (let i = 0; i < maxPredictions; i++) {
                 const labelDiv = document.createElement("div");
@@ -69,13 +68,12 @@
             }
         }
 
-        // Main loop for running predictions
-        async function loop() {
-            webcam.update();
+        // Start the prediction loop
+        async function startPrediction() {
             await predict();
-            window.requestAnimationFrame(loop);
+            window.requestAnimationFrame(startPrediction);
         }
-
+        
         async function predict() {
              const prediction = await model.predict(webcam.canvas);
               
@@ -89,7 +87,8 @@
                    labelDiv.innerHTML = `${className}: ${probability}`
         }
 
-   function startProgram() {
+    function startProgram() {
+            loadModel();
             playSoundAndStart();
         }
 
@@ -99,9 +98,7 @@
         }
 
         function stopProgram() {
-            if (webcam) {
-                webcam.stop();
-            }
+            webcam.stop();
             const studySound = new Audio("study_sound.mp3"); // Replace with the path to your study sound file
             studySound.pause();
         }
